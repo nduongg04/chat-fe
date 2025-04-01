@@ -27,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 					if (data.status === "success") {
 						return {
 							id: data.data.user.id,
-							name: data.data.user.username,
+							username: data.data.user.username,
 							email: data.data.user.email,
 							avatar: data.data.user.avatar,
 							accessToken: data.data.accessToken,
@@ -48,12 +48,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 			if (user) {
 				token.accessToken = user.accessToken;
 				token.refreshToken = user.refreshToken;
+				token.id = user.id!;
+				token.username = user.username!;
+				token.email = user.email!;
+				token.avatar = user.avatar!;
 			}
 			return token;
 		},
 		async session({ session, token }) {
 			if (session.user) {
+				session.user.id = token.id;
+				session.user.username = token.username;
+				session.user.email = token.email;
+				session.user.avatar = token.avatar;
 				session.user.accessToken = token.accessToken;
+				session.user.refreshToken = token.refreshToken;
 			}
 			return session;
 		},

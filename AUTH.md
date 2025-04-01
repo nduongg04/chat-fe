@@ -189,3 +189,73 @@ Error Codes
 403 - Forbidden (Invalid token)
 404 - Not Found
 500 - Internal Server Error
+
+
+Email Routes Documentation
+Password Reset Flow
+1. Request Password Reset
+POST /api/auth/request-password-reset
+Request a password reset code to be sent to your email.
+Request Body:
+{
+  "email": "user@example.com"
+}
+Response:
+{
+  "status": "success",
+  "message": "If an account exists with this email, a reset code has been sent."
+}
+Notes:
+For security reasons, the response is the same whether the email exists or not
+A 6-digit code will be sent to the email
+Code expires in 10 minutes
+2. Verify Reset Code
+POST /api/auth/verify-reset-code
+Verify the reset code received in email.
+Request Body:
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
+Response:
+{
+  "status": "success",
+  "data": {
+    "isValid": true
+  }
+}
+3. Reset Password
+POST /api/auth/reset-password
+Reset password using the verified code.
+Request Body:
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "newPassword": "newSecurePassword123"
+}
+Response:
+{
+  "status": "success",
+  "message": "Password has been reset successfully"
+}
+Notes:
+All active sessions will be logged out for security
+Password must be at least 6 characters long
+Code must be valid and not expired
+Email Template
+The reset code email includes:
+A clear subject line: "Password Reset Code"
+A 6-digit code in large, easy-to-read format
+Expiration time (10 minutes)
+Security warning for unintended recipients
+Security Features
+Rate limiting (can be implemented)
+10-minute code expiration
+No email existence disclosure
+All sessions logged out after password change
+Secure code storage in Redis
+One-time use codes
+Error Cases
+Invalid email format: 400 Bad Request
+Invalid/expired code: 401 Unauthorized
+Invalid password format: 400 Bad Request
