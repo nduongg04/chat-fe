@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { toastError } from "@/lib/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Github, Mail, Upload } from "lucide-react";
+import { ArrowLeft, Mail, Upload } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -272,24 +272,16 @@ export default function SignupPage() {
 									</span>
 								</div>
 							</div>
-							<div className="grid grid-cols-2 gap-4">
-								<Button
-									variant="outline"
-									type="button"
-									onClick={() => signIn("github")}
-								>
-									<Github className="mr-2 h-4 w-4" />
-									Github
-								</Button>
-								<Button
-									variant="outline"
-									type="button"
-									onClick={() => signIn("google")}
-								>
-									<Mail className="mr-2 h-4 w-4" />
-									Google
-								</Button>
-							</div>
+
+							<Button
+								variant="outline"
+								type="button"
+								className="w-full"
+								onClick={() => signIn("google")}
+							>
+								<Mail className="mr-2 h-4 w-4" />
+								Google
+							</Button>
 						</CardContent>
 					</form>
 				</Form>
