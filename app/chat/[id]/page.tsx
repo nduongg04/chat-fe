@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { ChatInterface } from "@/components/chat-interface"
 import { ChatSidebar } from "@/components/chat-sidebar"
 import { fetchConversationById } from "@/services/chatService";
+import { redirect } from "next/navigation";
 
 // Mock data for a conversation
 const mockConversation = {
@@ -72,11 +73,18 @@ interface PageProps {
 export default async function ChatConversationPage({ params }: PageProps) {
   const { id } = await params;
   const session = await auth();
-  const chatRoom = await fetchConversationById(session?.user.accessToken || "", id)
-  const conversation = chatRoom.data
+  const fetchConversation = async () => {
+    const chatRoom = await fetchConversationById(session?.user.accessToken || "", id)
+    const conversation = chatRoom.data
+    return conversation
+  }
+  const conversation = await fetchConversation()
+  if(conversation === null) {
+    redirect("/chat")
+  }
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <ChatSidebar activeConversationId={id} accessToken={session?.user.accessToken} userId={session?.user.id} />
+      <ChatSidebar activeConversationId={id} />
       <ChatInterface conversation={conversation} isOnline={true} />
     </div>
   )
