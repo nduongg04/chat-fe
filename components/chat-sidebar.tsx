@@ -24,78 +24,61 @@ import {
 	Sun,
 	Users,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import ChatRoomCard from "./chat-room-card";
+import { createGroupConversation, createPrivateConversation, fetchChatRooms } from "@/services/chatService";
+import { ChatRoom } from "@/types/chat";
+import ChatList from "./chat-list";
+import { Catamaran } from "next/font/google";
 
-// Mock data for conversations
-const mockConversations = [
-	{
-		id: "1",
-		name: "Jane Smith",
-		avatar: "/placeholder.svg?height=40&width=40",
-		lastMessage: "Sounds perfect! Looking forward to it 😊",
-		timestamp: "10:40 AM",
-		unread: 0,
-		online: true,
-	},
-	{
-		id: "2",
-		name: "John Doe",
-		avatar: "/placeholder.svg?height=40&width=40",
-		lastMessage: "Can you send me those files?",
-		timestamp: "Yesterday",
-		unread: 3,
-		online: true,
-	},
-	{
-		id: "3",
-		name: "Sarah Johnson",
-		avatar: "/placeholder.svg?height=40&width=40",
-		lastMessage: "Great! I'll see you then.",
-		timestamp: "Yesterday",
-		unread: 0,
-		online: false,
-	},
-	{
-		id: "4",
-		name: "Mike Wilson",
-		avatar: "/placeholder.svg?height=40&width=40",
-		lastMessage: "How's the project coming along?",
-		timestamp: "Monday",
-		unread: 0,
-		online: false,
-	},
-	{
-		id: "5",
-		name: "Emily Davis",
-		avatar: "/placeholder.svg?height=40&width=40",
-		lastMessage: "Thanks for your help!",
-		timestamp: "Sunday",
-		unread: 0,
-		online: true,
-	},
-];
 
 interface ChatSidebarProps {
 	activeConversationId?: string;
 	activeTab?: string;
+	accessToken?: string;
+	userId?: string;
 }
 
 export function ChatSidebar({
 	activeConversationId,
 	activeTab = "chats",
+	accessToken,
+	userId,
 }: ChatSidebarProps) {
+	
+	const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [filteredConversations, setFilteredConversations] = useState(chatRooms);
+	useEffect(() => {
+		const loadChatRooms = async () => {
+			try {
+				setLoading(true);
+				const response = await fetchChatRooms(accessToken || "", userId || "");
+				setChatRooms(response.data);
+				setFilteredConversations(response.data);
+			} catch (err) {
+				setError("Failed to load chat rooms");
+				console.error(err);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		loadChatRooms();
+	}, []);
+
+
 	const { theme, setTheme } = useTheme();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showNewConversationDialog, setShowNewConversationDialog] =
 		useState(false);
 
 	const router = useRouter();
-	const filteredConversations = mockConversations.filter((conversation) =>
-		conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	
 
 	// Add event listener for the new conversation button in the welcome screen
 	useEffect(() => {
@@ -112,6 +95,14 @@ export function ChatSidebar({
 			);
 		};
 	}, []);
+
+	useEffect(() => {
+		if(searchQuery.trim() == "" || searchQuery == null) {
+			setFilteredConversations(chatRooms);
+			return;
+		}
+		setFilteredConversations(chatRooms.filter((chat) => chat.members.some((member) => member.username.toLowerCase().includes(searchQuery.toLowerCase()))));
+	}, [searchQuery]);
 
 	return (
 		<div className="flex h-full w-80 flex-col border-r">
@@ -182,31 +173,6 @@ export function ChatSidebar({
 				</div>
 			</div>
 
-			<Tabs defaultValue={activeTab} className="w-full">
-				<div className="border-b px-4 py-2">
-					<TabsList className="grid w-full grid-cols-2">
-						<TabsTrigger value="chats" asChild>
-							<Link
-								href="/chat"
-								className="flex items-center justify-center"
-							>
-								<MessageCircle className="mr-2 h-4 w-4" />
-								Chats
-							</Link>
-						</TabsTrigger>
-						<TabsTrigger value="contacts" asChild>
-							<Link
-								href="/contacts"
-								className="flex items-center justify-center"
-							>
-								<Users className="mr-2 h-4 w-4" />
-								Contacts
-							</Link>
-						</TabsTrigger>
-					</TabsList>
-				</div>
-			</Tabs>
-
 			<div className="p-4">
 				<div className="relative">
 					<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -221,60 +187,7 @@ export function ChatSidebar({
 			</div>
 
 			<div className="flex-1 overflow-auto">
-				{filteredConversations.length > 0 ? (
-					<div className="space-y-1 p-2">
-						{filteredConversations.map((conversation) => (
-							<Link
-								key={conversation.id}
-								href={`/chat/${conversation.id}`}
-								className={cn(
-									"flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted",
-									activeConversationId === conversation.id &&
-										"bg-muted"
-								)}
-							>
-								<div className="relative">
-									<Avatar>
-										<AvatarImage
-											src={conversation.avatar}
-											alt={conversation.name}
-										/>
-										<AvatarFallback>
-											{conversation.name.charAt(0)}
-										</AvatarFallback>
-									</Avatar>
-									{conversation.online && (
-										<span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500"></span>
-									)}
-								</div>
-								<div className="flex-1 overflow-hidden">
-									<div className="flex items-center justify-between">
-										<h3 className="font-medium">
-											{conversation.name}
-										</h3>
-										<p className="text-xs text-muted-foreground">
-											{conversation.timestamp}
-										</p>
-									</div>
-									<p className="truncate text-sm text-muted-foreground">
-										{conversation.lastMessage}
-									</p>
-								</div>
-								{conversation.unread > 0 && (
-									<div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-										{conversation.unread}
-									</div>
-								)}
-							</Link>
-						))}
-					</div>
-				) : (
-					<div className="flex h-full flex-col items-center justify-center p-4 text-center">
-						<p className="text-muted-foreground">
-							No conversations found
-						</p>
-					</div>
-				)}
+				<ChatList chatRooms={filteredConversations} activeConversationId={activeConversationId} userId={userId || ""}/>
 			</div>
 
 			<div className="border-t p-4">
@@ -288,14 +201,38 @@ export function ChatSidebar({
 				</Button>
 			</div>
 			<NewConversationDialog
+				accessToken={accessToken}
+				userId={userId}
 				open={showNewConversationDialog}
 				onClose={() => setShowNewConversationDialog(false)}
-				onCreateConversation={(contactIds, groupName) => {
-					console.log(
-						"Creating conversation with:",
-						contactIds,
-						groupName
-					);
+				onCreateConversation={(contactIds, contactId, groupName, isGroup) => {
+					if(!isGroup) {
+						if(contactId) {
+							const createChat = async ()=> {
+								try {
+									const response = await createPrivateConversation(accessToken || "", contactId, userId || "");
+									setChatRooms([response.data, ...chatRooms]);
+									setFilteredConversations([response.data, ...filteredConversations ]);
+									router.push(`/chat/${response.data._id}`);
+								} catch (err) {
+								}
+							}
+							createChat();
+						}
+					} else{
+						if(contactIds && groupName) {
+							const createGroup = async ()=> {
+								try {
+									const response = await createGroupConversation(accessToken || "", groupName, userId || "", contactIds);
+									setChatRooms([response.data, ...chatRooms]);
+									setFilteredConversations([response.data, ...filteredConversations ]);
+									router.push(`/chat/${response.data._id}`);
+								}catch(e){
+								}
+							}
+							createGroup();
+						}
+					}
 					setShowNewConversationDialog(false);
 				}}
 			/>

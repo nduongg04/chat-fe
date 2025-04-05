@@ -18,7 +18,10 @@ import { BlockUserAlert } from "@/components/block-user-alert"
 import { SearchConversation } from "@/components/search-conversation"
 import { ConversationInfo } from "@/components/conversation-info"
 import { EmojiPicker } from "@/components/emoji-picker"
-
+import { ChatRoom } from "@/types/chat"
+import { deleteConversation } from "@/services/chatService"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 interface Message {
   id: string
   sender: string
@@ -41,10 +44,15 @@ interface Conversation {
 }
 
 interface ChatInterfaceProps {
-  conversation: Conversation
+  conversation: ChatRoom,
+  isOnline: boolean
 }
 
-export function ChatInterface({ conversation }: ChatInterfaceProps) {
+export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
+  const {data: session} = useSession();
+  const accessToken = session?.user.accessToken;
+  const userId = session?.user.id;
+  const router = useRouter();
   const [newMessage, setNewMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -126,17 +134,17 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Avatar>
-                <AvatarImage src={conversation.user.avatar} alt={conversation.user.name} />
-                <AvatarFallback>{conversation.user.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={conversation.members.find(member => member._id !== userId)?.avatar || ""} alt={conversation.members.find(member => member._id !== userId)?.username || ""} />
+                <AvatarFallback>{conversation.type == "group"? conversation.groupName.charAt(0) : conversation.members.find(member => member._id !== userId)?.username.charAt(0)}</AvatarFallback>
               </Avatar>
-              {conversation.user.status === "online" && (
+              {isOnline && (
                 <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500"></span>
               )}
             </div>
             <div>
-              <h2 className="font-medium">{conversation.user.name}</h2>
+              <h2 className="font-medium">{conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username}</h2>
               <p className="text-xs text-muted-foreground">
-                {conversation.user.status === "online" ? "Online" : "Offline"}
+                {isOnline ? "Online" : "Offline"}
               </p>
             </div>
           </div>
@@ -334,7 +342,13 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
       {/* Conversation Info Panel - Now on the right side */}
       {showConversationInfo && (
         <ConversationInfo
-          user={conversation.user}
+          user={{
+            id: conversation._id,
+            name: conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || "",
+            avatar: conversation.members.find(member => member._id !== userId)?.avatar || "",
+            status: "online",
+          }}
+          isGroup={conversation.type == "group"}
           onClose={() => setShowConversationInfo(false)}
           onViewProfile={() => setShowProfileModal(true)}
           onSearchInConversation={() => setSearchOpen(true)}
@@ -345,7 +359,10 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
       {/* Profile Modal */}
       <ProfileModal
         user={{
-          ...conversation.user,
+          id: conversation.members.find(member => member._id !== userId)?._id || "",
+          name: conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || "",
+          avatar: conversation.members.find(member => member._id !== userId)?.avatar || "",
+          status: "online",
           email: "jane.smith@example.com",
           birthday: "January 15, 1990",
         }}
@@ -355,7 +372,11 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
 
       {/* Call Screen */}
       <CallScreen
-        user={conversation.user}
+        user={{
+          id: conversation.members.find(member => member._id !== userId)?._id || "",
+          name: conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || "",
+          avatar: conversation.members.find(member => member._id !== userId)?.avatar || "",
+        }}
         callType={inCall === "audio" ? "audio" : "video"}
         open={!!inCall}
         onClose={() => setInCall(false)}
@@ -363,12 +384,18 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
 
       {/* Block User Alert */}
       <BlockUserAlert
-        userName={conversation.user.name}
+        userName={conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || ""}
         open={showBlockUserAlert}
         onClose={() => setShowBlockUserAlert(false)}
         onConfirm={() => {
-          console.log("User blocked:", conversation.user.name)
-          setShowBlockUserAlert(false)
+          const deleteChat = async () => {
+            const isDeleted = await deleteConversation(accessToken || "", conversation._id)
+            if (isDeleted) {
+              router.push("/chat")
+              setShowBlockUserAlert(false)
+            }
+          }
+          deleteChat()
         }}
       />
 
