@@ -287,24 +287,34 @@ export default function Home() {
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.6, delay: 0.2 }}
 					>
-						<Button
-							asChild
-							size="lg"
-							className="bg-indigo-600 text-white hover:bg-indigo-700 px-8 h-12 rounded-md"
+						<motion.div
+							whileHover={{ scale: 1.05 }}
+							whileTap={{ scale: 0.95 }}
 						>
-							<Link href="/signup">
-								Get Started
-								<ChevronRight className="ml-2 h-4 w-4" />
-							</Link>
-						</Button>
-						<Button
-							asChild
-							variant="outline"
-							size="lg"
-							className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 h-12 rounded-md"
+							<Button
+								asChild
+								size="lg"
+								className="bg-indigo-600 text-white hover:bg-indigo-700 px-8 h-12 rounded-md transition-transform duration-200"
+							>
+								<Link href="/signup">
+									Get Started
+									<ChevronRight className="ml-2 h-4 w-4" />
+								</Link>
+							</Button>
+						</motion.div>
+						<motion.div
+							whileHover={{ scale: 1.05 }}
+							whileTap={{ scale: 0.95 }}
 						>
-							<Link href="#enterprise">Enterprise Solutions</Link>
-						</Button>
+							<Button
+								asChild
+								variant="outline"
+								size="lg"
+								className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 h-12 rounded-md transition-transform duration-200"
+							>
+								<Link href="#enterprise">Enterprise Solutions</Link>
+							</Button>
+						</motion.div>
 					</motion.div>
 
 					{/* Hero Image/Mockup */}
@@ -432,7 +442,7 @@ export default function Home() {
 						<motion.div
 							key={index}
 							className="group relative overflow-hidden rounded-xl bg-white p-8 shadow-md transition-all duration-300 dark:bg-gray-900/50 hover:shadow-xl"
-							whileHover={{ y: -5 }}
+							whileHover={{ scale: 1.05, y: -5 }}
 							initial={{ opacity: 0, y: 20 }}
 							whileInView={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -720,6 +730,31 @@ export default function Home() {
 				</motion.div>
 			</div>
 
+			{/* Newsletter Signup Section */}
+			<div className="bg-gray-50 dark:bg-gray-900 py-20 border-t border-b border-gray-200 dark:border-gray-800">
+				<div className="container mx-auto px-4 md:px-8 text-center">
+					<h2 className="text-3xl font-bold text-gray-900 dark:text-white md:text-4xl mb-4">
+						Stay Updated
+					</h2>
+					<p className="mb-8 max-w-2xl mx-auto text-gray-600 dark:text-gray-400">
+						Subscribe to our newsletter for the latest updates on features, releases, and more.
+					</p>
+					<form className="mx-auto flex max-w-md flex-col sm:flex-row gap-4 justify-center">
+						<input
+							type="email"
+							required
+							placeholder="Enter your email"
+							className="w-full rounded-md border border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+						/>
+						<Button
+							type="submit"
+							className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md"
+						>
+							Subscribe
+						</Button>
+					</form>
+				</div>
+			</div>
 			{/* Footer */}
 			<footer className="border-t border-gray-200 bg-white py-12 dark:border-gray-800 dark:bg-gray-950">
 				<div className="container mx-auto px-4 md:px-8">
