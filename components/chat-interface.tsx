@@ -22,6 +22,7 @@ import { ChatRoom } from "@/types/chat"
 import { deleteConversation } from "@/services/chatService"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { toast } from "sonner"
 interface Message {
   id: string
   sender: string
@@ -61,11 +62,13 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
   const [inCall, setInCall] = useState<false | "audio" | "video">(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [forceUpdate, setForceUpdate] = useState(false)
+  
 
   // Add these state variables inside the component
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showBlockUserAlert, setShowBlockUserAlert] = useState(false)
   // const [showNewConversationDialog, setShowNewConversationDialog] = useState(false)
+
 
   // Simulate typing indicator
   useEffect(() => {
@@ -389,10 +392,14 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
         onClose={() => setShowBlockUserAlert(false)}
         onConfirm={() => {
           const deleteChat = async () => {
-            const isDeleted = await deleteConversation(accessToken || "", conversation._id)
-            if (isDeleted) {
-              router.push("/chat")
-              setShowBlockUserAlert(false)
+            try {
+              const isDeleted = await deleteConversation(accessToken || "", conversation._id)
+              if (isDeleted) {
+                router.push("/chat")
+                setShowBlockUserAlert(false)
+              }
+            } catch (error) {
+              toast.error("Failed to delete conversation")
             }
           }
           deleteChat()

@@ -33,6 +33,8 @@ import { createGroupConversation, createPrivateConversation, fetchChatRooms } fr
 import { ChatRoom } from "@/types/chat";
 import ChatList from "./chat-list";
 import { Catamaran } from "next/font/google";
+import { auth } from "@/auth";
+import { Toaster, toast } from "sonner";
 
 
 interface ChatSidebarProps {
@@ -61,14 +63,19 @@ export function ChatSidebar({
 				setChatRooms(response.data);
 				setFilteredConversations(response.data);
 			} catch (err) {
-				setError("Failed to load chat rooms");
+				toast.error("Failed to load chat rooms");
 				console.error(err);
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		loadChatRooms();
+		try {
+			loadChatRooms();
+		} catch (error) {
+			toast.error("An unexpected error occurred");
+			console.error(error);
+		}
 	}, []);
 
 
@@ -215,6 +222,7 @@ export function ChatSidebar({
 									setFilteredConversations([response.data, ...filteredConversations ]);
 									router.push(`/chat/${response.data._id}`);
 								} catch (err) {
+									toast.error("Failed to create conversation");
 								}
 							}
 							createChat();
@@ -228,6 +236,7 @@ export function ChatSidebar({
 									setFilteredConversations([response.data, ...filteredConversations ]);
 									router.push(`/chat/${response.data._id}`);
 								}catch(e){
+									toast.error("Failed to create group");
 								}
 							}
 							createGroup();

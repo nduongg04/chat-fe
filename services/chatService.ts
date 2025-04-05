@@ -1,14 +1,23 @@
+'use server'
 import { ChatResponse, CreateChatResponse } from "@/types/chat";
+import { auth } from "@/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
 export const fetchChatRooms = async (token: string, userId: string): Promise<ChatResponse> => {
+    let accessToken = token;
+    let myId = userId;
+    if(!token || !userId) {
+        const session = await auth();
+        accessToken = session?.user.accessToken || "";
+        myId = session?.user.id || "";
+    }
     try {
-        const response = await fetch(`${API_URL}/chats/getChatByUserId/${userId}`, {
+        const response = await fetch(`${API_URL}/chats/getChatByUserId/${myId}`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            "Authorization": `Bearer ${accessToken}`
         },
         });
 
@@ -25,15 +34,22 @@ export const fetchChatRooms = async (token: string, userId: string): Promise<Cha
 }; 
 
 export const createPrivateConversation = async (token: string, contactId: string, userId: string) => {
+    let accessToken = token;
+    let myId = userId;
+    if(!token || !userId) {
+        const session = await auth();
+        accessToken = session?.user.accessToken || "";
+        myId = session?.user.id || "";
+    }
     try {
         const response = await fetch(`${API_URL}/chats/createChat`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${accessToken}`
             },
             body: JSON.stringify({ 
-                members: [contactId, userId]
+                members: [contactId, myId]
             })
         });
 
@@ -50,15 +66,22 @@ export const createPrivateConversation = async (token: string, contactId: string
 }
 
 export const createGroupConversation = async (token: string, groupName: string, userId: string, contactIds: string[]) => {
+    let accessToken = token;
+    let myId = userId;
+    if(!token || !userId) {
+        const session = await auth();
+        accessToken = session?.user.accessToken || "";
+        myId = session?.user.id || "";
+    }
     try {
         const response = await fetch(`${API_URL}/chats/group`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${accessToken}`
             },
             body: JSON.stringify({
-                members: [...contactIds, userId],
+                members: [...contactIds, myId],
                 groupName: groupName
             })
         });
@@ -76,12 +99,17 @@ export const createGroupConversation = async (token: string, groupName: string, 
 }
 
 export const fetchConversationById = async (token: string, conversationId: string) => {
+    let accessToken = token;
+    if(!token) {
+        const session = await auth();
+        accessToken = session?.user.accessToken || "";
+    }
     try {
         const response = await fetch(`${API_URL}/chats/${conversationId}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${accessToken}`
             }
         });
 
@@ -98,12 +126,17 @@ export const fetchConversationById = async (token: string, conversationId: strin
 }
 
 export const deleteConversation = async (token: string, conversationId: string) => {
+    let accessToken = token;
+    if(!token) {
+        const session = await auth();
+        accessToken = session?.user.accessToken || "";
+    }
     try {
         const response = await fetch(`${API_URL}/chats/${conversationId}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${accessToken}`
             }
         });
 
