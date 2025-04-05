@@ -26,11 +26,11 @@ export function BlockUserAlert({ userName, open, onClose, onConfirm }: BlockUser
         <AlertDialogHeader>
           <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            <AlertDialogTitle>Block {userName}</AlertDialogTitle>
+            <AlertDialogTitle>Delete {userName}</AlertDialogTitle>
           </div>
           <AlertDialogDescription>
             {userName} will no longer be able to message you or add you to groups. They won't be notified that you've
-            blocked them.
+            deleted them.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -39,7 +39,7 @@ export function BlockUserAlert({ userName, open, onClose, onConfirm }: BlockUser
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={onConfirm}
           >
-            Block
+            Delete
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

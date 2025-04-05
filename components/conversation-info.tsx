@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 interface ConversationUser {
   id: string
   name: string
-  avatar: string
+  avatar: string 
   email?: string
   status: string
 }
@@ -197,7 +197,7 @@ export function ConversationInfo({
 
           <Button variant="destructive" className="w-full" onClick={onBlockUser}>
             <Shield className="mr-2 h-5 w-5" />
-            Block {isGroup ? "Group" : "User"}
+            Delete {isGroup ? "Group" : "User"}
           </Button>
         </div>
       </ScrollArea>
