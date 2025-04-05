@@ -1,23 +1,24 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { AtSign, Image, Info, Mic, Paperclip, Phone, Send, Smile, Video } from "lucide-react"
+import { AtSign, Image, Info, Mic, Paperclip, Phone, Send, Smile, Video, Lock, LockOpen } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { useEncryption } from "@/lib/useEncryption"
+import { toastError, toastSuccess } from "@/lib/toast"
 
-// Add these imports at the top
+// Components
 import { ProfileModal } from "@/components/profile-modal"
 import { CallScreen } from "@/components/call-screen"
 import { BlockUserAlert } from "@/components/block-user-alert"
 import { SearchConversation } from "@/components/search-conversation"
 import { ConversationInfo } from "@/components/conversation-info"
 import { EmojiPicker } from "@/components/emoji-picker"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 interface Message {
   id: string
@@ -25,6 +26,8 @@ interface Message {
   content: string
   timestamp: string
   status: "sending" | "sent" | "delivered" | "read"
+  encryptedContent?: string
+  isEncrypted?: boolean
 }
 
 interface User {
@@ -32,6 +35,7 @@ interface User {
   name: string
   avatar: string
   status: string
+  publicKey?: string
 }
 
 interface Conversation {
@@ -44,22 +48,37 @@ interface ChatInterfaceProps {
   conversation: Conversation
 }
 
-export function ChatInterface({ conversation }: ChatInterfaceProps) {
+export function ChatInterface({ conversation: initialConversation }: ChatInterfaceProps) {
+  // State management
+  const [conversation, setConversation] = useState(initialConversation)
   const [newMessage, setNewMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const [showConversationInfo, setShowConversationInfo] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [inCall, setInCall] = useState<false | "audio" | "video">(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [forceUpdate, setForceUpdate] = useState(false)
-
-  // Add these state variables inside the component
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showBlockUserAlert, setShowBlockUserAlert] = useState(false)
-  // const [showNewConversationDialog, setShowNewConversationDialog] = useState(false)
+  const [showEncryptionDialog, setShowEncryptionDialog] = useState(false)
+  const [isEncryptionEnabled, setIsEncryptionEnabled] = useState(false)
 
-  // Simulate typing indicator
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Encryption hook
+  const {
+    publicKey,
+    privateKey,
+    encrypt,
+    decrypt,
+    generateKeys,
+  } = useEncryption()
+
+  /// Effects
+  useEffect(() => {
+    setIsEncryptionEnabled(!!(conversation.user.publicKey && publicKey))
+  }, [conversation.user.publicKey, publicKey])
+
   useEffect(() => {
     const typingTimeout = setTimeout(() => {
       setIsTyping(Math.random() > 0.7)
@@ -68,43 +87,150 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
     return () => clearTimeout(typingTimeout)
   }, [conversation.messages])
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [conversation.messages, isTyping, forceUpdate])
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Message handlers
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (newMessage.trim() === "") return
 
-    // Create an optimistic message
-    const optimisticMessage = {
-      id: `temp-${Date.now()}`,
-      sender: "currentUser",
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      status: "sending" as "sending" | "sent" | "delivered" | "read",
+    let messageContent = newMessage
+    let isEncrypted = false
+
+    if (isEncryptionEnabled && conversation.user.publicKey) {
+      try {
+        messageContent = encrypt(newMessage, conversation.user.publicKey)
+        isEncrypted = true
+      } catch (error) {
+        console.error("Encryption failed:", error)
+        toastError("Failed to encrypt message")
+        return
+      }
     }
 
-    // In a real app, this would send the message to the backend
-    console.log("Sending message:", newMessage)
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      sender: "currentUser",
+      content: isEncrypted ? "Encrypted message" : messageContent,
+      encryptedContent: isEncrypted ? messageContent : undefined,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "sending",
+      isEncrypted,
+    }
 
-    // Clear input and add optimistic message
     setNewMessage("")
 
-    // Simulate message being sent and delivered
     setTimeout(() => {
       optimisticMessage.status = "sent"
-      // Force re-render
-      setForceUpdate((prev) => !prev)
+      setForceUpdate(prev => !prev)
     }, 500)
 
     setTimeout(() => {
       optimisticMessage.status = "delivered"
-      // Force re-render
-      setForceUpdate((prev) => !prev)
+      setForceUpdate(prev => !prev)
     }, 1500)
   }
+
+  const decryptMessageContent = (message: Message): string => {
+    if (!message.isEncrypted || !message.encryptedContent) return message.content
+    if (!privateKey) return "🔒 Encrypted message (unable to decrypt)"
+
+    try {
+      return decrypt(message.encryptedContent, conversation.user.publicKey!)
+    } catch (error) {
+      console.error("Decryption failed:", error)
+      return "🔒 Error decrypting message"
+    }
+  }
+
+  // Encryption handlers
+  const handleAddPublicKey = (key: string) => {
+    if (!key.trim()) {
+      toastError("Please enter a valid public key")
+      return
+    }
+
+    try {
+      setConversation(prev => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          publicKey: key
+        }
+      }))
+      toastSuccess("Public key added successfully")
+      setIsEncryptionEnabled(true)
+    } catch (error) {
+      toastError("Failed to add public key")
+    }
+  }
+
+  const handleGenerateKeys = () => {
+    const newPublicKey = generateKeys()
+    toastSuccess(
+      "Encryption Keys Generated",
+      "Your encryption keys have been created successfully"
+    )
+    return newPublicKey
+  }
+
+  // UI components
+  const renderEncryptionDialog = () => (
+    <AlertDialog open={showEncryptionDialog} onOpenChange={setShowEncryptionDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>End-to-End Encryption</AlertDialogTitle>
+          <div className="text-sm text-muted-foreground">
+            {publicKey ? (
+              <div className="space-y-4">
+                <p>Your encryption keys are ready. To enable secure messaging:</p>
+                <ol className="list-decimal pl-5 space-y-2">
+                  <li>Share your public key with the recipient</li>
+                  <li>Get their public key and add it to their profile</li>
+                  <li>All messages will be encrypted automatically</li>
+                </ol>
+                <div className="bg-muted p-3 rounded-md">
+                  <p className="text-sm font-medium mb-1">Your Public Key:</p>
+                  <code className="text-xs break-all">{publicKey}</code>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p>Generate encryption keys to enable end-to-end encrypted messaging.</p>
+                <p>This will create a unique key pair that only you can decrypt.</p>
+              </div>
+            )}
+          </div>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          {publicKey ? (
+            <AlertDialogAction onClick={() => setShowEncryptionDialog(false)}>
+              Done
+            </AlertDialogAction>
+          ) : (
+            <AlertDialogAction onClick={handleGenerateKeys}>
+              Generate Keys
+            </AlertDialogAction>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+
+  const renderMessageContent = (message: Message) => (
+    <>
+      {message.isEncrypted && (
+        <div className="flex items-center gap-1 mb-1">
+          <Lock className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Encrypted</span>
+        </div>
+      )}
+      <p>{decryptMessageContent(message)}</p>
+    </>
+  )
 
   // Add this function to handle emoji selection
   const handleEmojiSelect = (emoji: string) => {
@@ -137,10 +263,38 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
               <h2 className="font-medium">{conversation.user.name}</h2>
               <p className="text-xs text-muted-foreground">
                 {conversation.user.status === "online" ? "Online" : "Offline"}
+                {isEncryptionEnabled && (
+                  <span className="flex items-center gap-1 mt-1">
+                    <Lock className="h-3 w-3 text-green-500" />
+                    <span className="text-green-500 text-xs">End-to-end encrypted</span>
+                  </span>
+                )}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => setShowEncryptionDialog(true)}
+                  >
+                    {isEncryptionEnabled ? (
+                      <Lock className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <LockOpen className="h-5 w-5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isEncryptionEnabled ? "Encryption enabled" : "Enable encryption"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -195,7 +349,13 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
                     message.sender === "currentUser" ? "bg-primary text-primary-foreground" : "bg-muted",
                   )}
                 >
-                  <p>{message.content}</p>
+                  {message.isEncrypted && (
+                    <div className="flex items-center gap-1 mb-1">
+                      <Lock className="h-3 w-3" />
+                      <span className="text-xs">Encrypted</span>
+                    </div>
+                  )}
+                  {renderMessageContent(message)}
                   <div
                     className={cn(
                       "mt-1 flex items-center justify-end gap-1 text-xs",
@@ -286,7 +446,7 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
 
             <Input
               type="text"
-              placeholder="Type a message..."
+              placeholder={isEncryptionEnabled ? "Type an encrypted message..." : "Type a message..."}
               className="flex-1"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -331,7 +491,7 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
         {showEmojiPicker && <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />}
       </div>
 
-      {/* Conversation Info Panel - Now on the right side */}
+      {/* Conversation Info Panel */}
       {showConversationInfo && (
         <ConversationInfo
           user={conversation.user}
@@ -339,6 +499,8 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
           onViewProfile={() => setShowProfileModal(true)}
           onSearchInConversation={() => setSearchOpen(true)}
           onBlockUser={() => setShowBlockUserAlert(true)}
+          onAddPublicKey={handleAddPublicKey}
+          currentUserPublicKey={publicKey}
         />
       )}
 
@@ -378,7 +540,9 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
         onClose={() => setSearchOpen(false)}
         onNavigateToMessage={handleNavigateToMessage}
       />
+
+      {/* Encryption Dialog */}
+      {renderEncryptionDialog()}
     </div>
   )
 }
-

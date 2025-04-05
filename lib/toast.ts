@@ -1,23 +1,58 @@
-import { toast } from "sonner";
+"use client";
 
-const toastError = (message: string, description?: string) => {
-	toast.error(message, {
+import { toast as sonnerToast } from "sonner";
+
+// Export toast chính từ sonner
+export const toast = sonnerToast;
+
+// Toast error với style mặc định
+export const toastError = (title: string, description?: string) => {
+	sonnerToast.error(title, {
 		description,
 		style: {
-			backgroundColor: "red",
-			color: "white",
+			backgroundColor: '#ef4444', // bg-red-500
+			color: 'white',
+			border: 'none',
 		},
+		className: 'toast-error',
 	});
 };
 
-const toastSuccess = (message: string, description?: string) => {
-	toast.success(message, {
+// Toast success với style mặc định
+export const toastSuccess = (title: string, description?: string) => {
+	sonnerToast.success(title, {
 		description,
 		style: {
-			backgroundColor: "green",
-			color: "white",
+			backgroundColor: '#22c55e', // bg-green-500
+			color: 'white',
+			border: 'none',
 		},
+		className: 'toast-success',
 	});
 };
 
-export { toastError, toastSuccess };
+// Toast info với style mặc định
+export const toastInfo = (title: string, description?: string) => {
+	sonnerToast.info(title, {
+		description,
+		style: {
+			backgroundColor: '#3b82f6', // bg-blue-500
+			color: 'white',
+			border: 'none',
+		},
+		className: 'toast-info',
+	});
+};
+
+// Toast warning với style mặc định
+export const toastWarning = (title: string, description?: string) => {
+	sonnerToast.warning(title, {
+		description,
+		style: {
+			backgroundColor: '#f59e0b', // bg-yellow-500
+			color: 'white',
+			border: 'none',
+		},
+		className: 'toast-warning',
+	});
+};
