@@ -103,10 +103,10 @@ export function ChatInterface({ conversation: initialConversation }: ChatInterfa
       try {
         messageContent = encrypt(newMessage, conversation.user.publicKey)
         isEncrypted = true
-      } catch (error) {
-        console.error("Encryption failed:", error)
-        toastError("Failed to encrypt message")
-        return
+      } catch {
+          console.error("Encryption failed")
+          toastError("Failed to encrypt message")
+          return
       }
     }
 
@@ -139,8 +139,8 @@ export function ChatInterface({ conversation: initialConversation }: ChatInterfa
 
     try {
       return decrypt(message.encryptedContent, conversation.user.publicKey!)
-    } catch (error) {
-      console.error("Decryption failed:", error)
+    } catch {
+      console.error("Decryption failed")
       return "🔒 Error decrypting message"
     }
   }
@@ -162,7 +162,7 @@ export function ChatInterface({ conversation: initialConversation }: ChatInterfa
       }))
       toastSuccess("Public key added successfully")
       setIsEncryptionEnabled(true)
-    } catch (error) {
+    } catch {
       toastError("Failed to add public key")
     }
   }

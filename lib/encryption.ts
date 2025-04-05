@@ -30,7 +30,7 @@ export function encryptMessage(
     const messageBytes = sodium.from_string(message);
 
     // Mã hóa tin nhắn
-    const encryptedMessage = sodium.crypto_box(
+    const encryptedMessage = sodium.crypto_box_easy(
         messageBytes,
         nonce,
         receiverPublicKey,
@@ -63,7 +63,7 @@ export function decryptMessage(
     );
 
     // Giải mã tin nhắn
-    const decryptedMessage = sodium.crypto_box_open(
+    const decryptedMessage = sodium.crypto_box_open_easy(
         encryptedMessage,
         nonce,
         senderPublicKey,

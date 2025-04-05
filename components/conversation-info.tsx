@@ -46,7 +46,6 @@ export function ConversationInfo({
   user,
   isGroup = false,
   groupMembers = [],
-  media = [],
   onClose,
   onViewProfile,
   onSearchInConversation,
@@ -100,7 +99,7 @@ export function ConversationInfo({
       onAddPublicKey(publicKeyInput)
       setPublicKeyInput("")
       toastSuccess("Public key added successfully")
-    } catch (error) {
+    } catch {
       toastError("Failed to add public key")
     }
   }
