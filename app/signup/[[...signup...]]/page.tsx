@@ -1,5 +1,6 @@
 "use client";
 
+import Icons from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { toastError } from "@/lib/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Mail, Upload } from "lucide-react";
+import { ArrowLeft, Upload } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -276,10 +277,14 @@ export default function SignupPage() {
 							<Button
 								variant="outline"
 								type="button"
-								className="w-full"
-								onClick={() => signIn("google")}
+								className="w-full flex items-center justify-center cursor-pointer"
+								onClick={() =>
+									signIn("google", {
+										redirectTo: "/chat",
+									})
+								}
 							>
-								<Mail className="mr-2 h-4 w-4" />
+								<Icons.Google className="size-4 text-center" />
 								Google
 							</Button>
 						</CardContent>

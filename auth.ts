@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -32,6 +33,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 							avatar: data.data.user.avatar,
 							accessToken: data.data.accessToken,
 							refreshToken: data.data.refreshToken,
+							bio: data.data.user.bio,
+							status: data.data.user.status,
+							theme: data.data.user.theme,
+							lastSeen: data.data.user.lastSeen,
 						};
 					}
 
@@ -42,8 +47,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 				}
 			},
 		}),
+		Google,
 	],
 	callbacks: {
+		async signIn({ account, profile, user }) {
+			if (account?.provider === "google") {
+				try {
+					const res = await fetch(`${API_URL}/auth/google`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ profile }),
+					});
+					const data = await res.json();
+					user.accessToken = data.data.accessToken;
+					user.refreshToken = data.data.refreshToken;
+					user.id = data.data.user.id;
+					user.username = data.data.user.username;
+					user.email = data.data.user.email;
+					user.avatar = data.data.user.avatar;
+					user.bio = data.data.user.bio;
+					user.status = data.data.user.status;
+					user.theme = data.data.user.theme;
+					user.lastSeen = data.data.user.lastSeen;
+					// Return true to allow the sign-in to proceed
+					return data.status === "success";
+				} catch (error) {
+					console.error("Google auth error:", error);
+					return false;
+				}
+			}
+			return true;
+		},
 		async jwt({ token, user }) {
 			if (user) {
 				token.accessToken = user.accessToken;
@@ -52,6 +86,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 				token.username = user.username!;
 				token.email = user.email!;
 				token.avatar = user.avatar!;
+				token.bio = user.bio!;
+				token.status = user.status!;
+				token.theme = user.theme!;
+				token.lastSeen = user.lastSeen!;
 			}
 			return token;
 		},
@@ -63,6 +101,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 				session.user.avatar = token.avatar;
 				session.user.accessToken = token.accessToken;
 				session.user.refreshToken = token.refreshToken;
+				session.user.bio = token.bio;
+				session.user.status = token.status;
+				session.user.theme = token.theme;
+				session.user.lastSeen = token.lastSeen;
 			}
 			return session;
 		},
@@ -71,19 +113,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 		signIn: "/login",
 	},
 });
-
-// Extend next-auth session type to include accessToken
-declare module "next-auth" {
-	interface Session {
-		user: {
-			id: string;
-			name: string;
-			email: string;
-			image?: string;
-			accessToken: string;
-		};
-	}
-	interface User {
-		accessToken: string;
-	}
-}
