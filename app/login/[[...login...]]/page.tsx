@@ -1,5 +1,6 @@
 "use client";
 
+import Icons from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -22,8 +23,8 @@ import { Separator } from "@/components/ui/separator";
 import { loginSchema } from "@/lib/schemas";
 import { toastError } from "@/lib/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Github, Mail } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { ArrowLeft } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -35,7 +36,9 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
+	const { data: session } = useSession();
 
+	console.log("session", session);
 	const form = useForm<LoginForm>({
 		resolver: zodResolver(loginSchema),
 		defaultValues: {
@@ -151,24 +154,19 @@ export default function LoginPage() {
 									</span>
 								</div>
 							</div>
-							<div className="grid grid-cols-2 gap-4">
-								<Button
-									variant="outline"
-									type="button"
-									onClick={() => signIn("github")}
-								>
-									<Github className="mr-2 h-4 w-4" />
-									Github
-								</Button>
-								<Button
-									variant="outline"
-									type="button"
-									onClick={() => signIn("google")}
-								>
-									<Mail className="mr-2 h-4 w-4" />
-									Google
-								</Button>
-							</div>
+							<Button
+								variant="outline"
+								type="button"
+								className="w-full flex items-center justify-center cursor-pointer"
+								onClick={async () => {
+									await signIn("google", {
+										redirectTo: "/chat",
+									});
+								}}
+							>
+								<Icons.Google className="size-4 text-center" />
+								Google
+							</Button>
 						</CardContent>
 					</form>
 				</Form>
