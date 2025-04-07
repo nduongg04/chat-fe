@@ -12,6 +12,7 @@ declare module "next-auth/jwt" {
 		status: "online" | "offline";
 		theme: "light" | "dark";
 		lastSeen: Date;
+		deviceId: string;
 	}
 }
 
@@ -27,6 +28,7 @@ declare module "next-auth" {
 		status: "online" | "offline";
 		theme: "light" | "dark";
 		lastSeen: Date;
+		deviceId: string;
 	}
 	interface Session {
 		user: User;

@@ -1,5 +1,6 @@
 "use client";
 
+import { logout } from "@/actions/logout";
 import { NewConversationDialog } from "@/components/new-conversation-dialog";
 import { useTheme } from "@/components/theme-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,30 +13,18 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import {
-	Edit,
-	LogOut,
-	MessageCircle,
-	Moon,
-	Search,
-	Settings,
-	Sun,
-	Users,
-} from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+	createGroupConversation,
+	createPrivateConversation,
+	fetchChatRooms,
+} from "@/services/chatService";
+import { ChatRoom } from "@/types/chat";
+import { Edit, LogOut, Moon, Search, Settings, Sun } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import ChatRoomCard from "./chat-room-card";
-import { createGroupConversation, createPrivateConversation, fetchChatRooms } from "@/services/chatService";
-import { ChatRoom } from "@/types/chat";
+import { toast } from "sonner";
 import ChatList from "./chat-list";
-import { Catamaran } from "next/font/google";
-import { auth } from "@/auth";
-import { Toaster, toast } from "sonner";
-
 
 interface ChatSidebarProps {
 	activeConversationId?: string;
@@ -50,16 +39,19 @@ export function ChatSidebar({
 	accessToken,
 	userId,
 }: ChatSidebarProps) {
-	
 	const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [filteredConversations, setFilteredConversations] = useState(chatRooms);
+	const [filteredConversations, setFilteredConversations] =
+		useState(chatRooms);
 	useEffect(() => {
 		const loadChatRooms = async () => {
 			try {
 				setLoading(true);
-				const response = await fetchChatRooms(accessToken || "", userId || "");
+				const response = await fetchChatRooms(
+					accessToken || "",
+					userId || ""
+				);
 				setChatRooms(response.data);
 				setFilteredConversations(response.data);
 			} catch (err) {
@@ -78,14 +70,12 @@ export function ChatSidebar({
 		}
 	}, []);
 
-
 	const { theme, setTheme } = useTheme();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showNewConversationDialog, setShowNewConversationDialog] =
 		useState(false);
 
 	const router = useRouter();
-	
 
 	// Add event listener for the new conversation button in the welcome screen
 	useEffect(() => {
@@ -104,11 +94,19 @@ export function ChatSidebar({
 	}, []);
 
 	useEffect(() => {
-		if(searchQuery.trim() == "" || searchQuery == null) {
+		if (searchQuery.trim() == "" || searchQuery == null) {
 			setFilteredConversations(chatRooms);
 			return;
 		}
-		setFilteredConversations(chatRooms.filter((chat) => chat.members.some((member) => member.username.toLowerCase().includes(searchQuery.toLowerCase()))));
+		setFilteredConversations(
+			chatRooms.filter((chat) =>
+				chat.members.some((member) =>
+					member.username
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase())
+				)
+			)
+		);
 	}, [searchQuery]);
 
 	return (
@@ -168,8 +166,7 @@ export function ChatSidebar({
 							<DropdownMenuItem
 								className="text-red-600 focus:text-red-600"
 								onClick={async () => {
-									await signOut({ redirect: false });
-									router.replace("/");
+									await logout();
 								}}
 							>
 								<LogOut className="mr-2 h-4 w-4" />
@@ -194,7 +191,11 @@ export function ChatSidebar({
 			</div>
 
 			<div className="flex-1 overflow-auto">
-				<ChatList chatRooms={filteredConversations} activeConversationId={activeConversationId} userId={userId || ""}/>
+				<ChatList
+					chatRooms={filteredConversations}
+					activeConversationId={activeConversationId}
+					userId={userId || ""}
+				/>
 			</div>
 
 			<div className="border-t p-4">
@@ -212,33 +213,59 @@ export function ChatSidebar({
 				userId={userId}
 				open={showNewConversationDialog}
 				onClose={() => setShowNewConversationDialog(false)}
-				onCreateConversation={(contactIds, contactId, groupName, isGroup) => {
-					if(!isGroup) {
-						if(contactId) {
-							const createChat = async ()=> {
+				onCreateConversation={(
+					contactIds,
+					contactId,
+					groupName,
+					isGroup
+				) => {
+					if (!isGroup) {
+						if (contactId) {
+							const createChat = async () => {
 								try {
-									const response = await createPrivateConversation(accessToken || "", contactId, userId || "");
+									const response =
+										await createPrivateConversation(
+											accessToken || "",
+											contactId,
+											userId || ""
+										);
 									setChatRooms([response.data, ...chatRooms]);
-									setFilteredConversations([response.data, ...filteredConversations ]);
+									setFilteredConversations([
+										response.data,
+										...filteredConversations,
+									]);
 									router.push(`/chat/${response.data._id}`);
 								} catch (err) {
-									toast.error("Failed to create conversation");
+									console.error("err", err);
+									toast.error(
+										"Failed to create conversation"
+									);
 								}
-							}
+							};
 							createChat();
 						}
-					} else{
-						if(contactIds && groupName) {
-							const createGroup = async ()=> {
+					} else {
+						if (contactIds && groupName) {
+							const createGroup = async () => {
 								try {
-									const response = await createGroupConversation(accessToken || "", groupName, userId || "", contactIds);
+									const response =
+										await createGroupConversation(
+											accessToken || "",
+											groupName,
+											userId || "",
+											contactIds
+										);
 									setChatRooms([response.data, ...chatRooms]);
-									setFilteredConversations([response.data, ...filteredConversations ]);
+									setFilteredConversations([
+										response.data,
+										...filteredConversations,
+									]);
 									router.push(`/chat/${response.data._id}`);
-								}catch(e){
+								} catch (e) {
+									console.error("err", e);
 									toast.error("Failed to create group");
 								}
-							}
+							};
 							createGroup();
 						}
 					}

@@ -24,7 +24,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 					});
 
 					const data = await res.json();
-
 					if (data.status === "success") {
 						return {
 							id: data.data.user.id,
@@ -37,6 +36,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 							status: data.data.user.status,
 							theme: data.data.user.theme,
 							lastSeen: data.data.user.lastSeen,
+              deviceId: data.data.deviceId,
 						};
 					}
 
@@ -69,6 +69,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 					user.status = data.data.user.status;
 					user.theme = data.data.user.theme;
 					user.lastSeen = data.data.user.lastSeen;
+					user.deviceId = data.data.deviceId;
 					// Return true to allow the sign-in to proceed
 					return data.status === "success";
 				} catch (error) {
@@ -90,6 +91,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 				token.status = user.status!;
 				token.theme = user.theme!;
 				token.lastSeen = user.lastSeen!;
+				token.deviceId = user.deviceId!;
 			}
 			return token;
 		},
@@ -105,6 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 				session.user.status = token.status;
 				session.user.theme = token.theme;
 				session.user.lastSeen = token.lastSeen;
+				session.user.deviceId = token.deviceId;
 			}
 			return session;
 		},
