@@ -1,11 +1,16 @@
 "use client"
 
 import { ChatSidebar } from "@/components/chat-sidebar"
+import { useSession } from "next-auth/react";
 import React from "react"
 export default function ChatPage() {
+  const {data: session} = useSession();
+  const accessToken = session?.user.accessToken;
+  const userId = session?.user.id;
+  console.log(accessToken, userId)
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <ChatSidebar />
+      <ChatSidebar accessToken={accessToken} userId={userId} />
       <div className="flex flex-1 flex-col items-center justify-center bg-muted/30 dark:bg-muted/10">
         <div className="flex flex-col items-center justify-center space-y-4 p-8 text-center">
           <div className="rounded-full bg-primary/10 p-6">
@@ -40,7 +45,20 @@ export default function ChatPage() {
   )
 }
 
-function Button({ children, variant = "default", className = "", onClick }: { children: React.ReactNode; variant?: "default" | "outline"; className?: string; onClick?: () => void }) {
+
+
+
+export function Button({ 
+  children, 
+  variant = "default", 
+  className = "",   
+  onClick 
+}: { 
+  children: React.ReactNode;
+  variant?: "default" | "outline";
+  className?: string;
+  onClick?: () => void;
+}) {
   const baseClasses =
     "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background"
 
@@ -55,4 +73,3 @@ function Button({ children, variant = "default", className = "", onClick }: { ch
     </button>
   )
 }
-
