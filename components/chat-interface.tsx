@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 // Add these imports at the top
 import { ProfileModal } from "@/components/profile-modal"
-import { CallScreen } from "@/components/call-screen"
+// import { CallScreen } from "@/components/call-screen"
 import { BlockUserAlert } from "@/components/block-user-alert"
 import { SearchConversation } from "@/components/search-conversation"
 import { ConversationInfo } from "@/components/conversation-info"
@@ -50,7 +50,7 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [showConversationInfo, setShowConversationInfo] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [inCall, setInCall] = useState<false | "audio" | "video">(false)
+  // const [inCall, setInCall] = useState<false | "audio" | "video">(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [forceUpdate, setForceUpdate] = useState(false)
 
@@ -117,7 +117,11 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
     // In a real app, this would scroll to the message
     console.log("Navigating to message:", messageId)
   }
-
+  const openCall = (callType: "audio" | "video", id: string) => {
+    console.log("Opening call:", callType, id)
+    const url = `/call/${id}?type=${callType}`
+    window.open(url, "_blank", "width=800,height=600")
+  }
   return (
     <div className="flex h-full flex-1">
       <div className="flex flex-1 flex-col">
@@ -144,7 +148,7 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setInCall("audio")}>
+                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => openCall("video", 'user2')}>
                     <Phone className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -155,7 +159,7 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setInCall("video")}>
+                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => openCall("video", conversation.user.id)}>
                     <Video className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -354,12 +358,12 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
       />
 
       {/* Call Screen */}
-      <CallScreen
+      {/* <CallScreen
         user={conversation.user}
         callType={inCall === "audio" ? "audio" : "video"}
         open={!!inCall}
         onClose={() => setInCall(false)}
-      />
+      /> */}
 
       {/* Block User Alert */}
       <BlockUserAlert
