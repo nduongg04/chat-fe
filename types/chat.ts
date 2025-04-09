@@ -8,13 +8,26 @@ export interface ChatRoom {
   _id: string;
   type: string;
   members: Member[];
-  messages: any[]; // You can define a Message interface if needed
+  messages: Message[]; 
   groupOwner: Member[];
   groupName: string;
   createdAt: string;
   updatedAt: string;
   __v: number;
 }
+
+type MessageType = "text" | "image" | "video" | "file";
+export interface Message {
+  id: string;
+  chatId: string,
+  senderId: string;
+  content?: string;
+  messageType: MessageType;
+  fileUrl?: string;
+  timestamp: string;
+  status: "sending" | "sent" | "delivered" | "read";
+}
+
 
 export interface ChatResponse {
   status: string;
