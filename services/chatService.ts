@@ -2,7 +2,7 @@
 import { ChatResponse, CreateChatResponse } from "@/types/chat";
 import { auth } from "@/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export const fetchChatRooms = async (token: string, userId: string): Promise<ChatResponse> => {
     let accessToken = token;

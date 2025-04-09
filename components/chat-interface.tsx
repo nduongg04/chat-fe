@@ -141,15 +141,35 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Avatar>
-                <AvatarImage src={conversation.members.find(member => member._id !== userId)?.avatar || ""} alt={conversation.members.find(member => member._id !== userId)?.username || ""} />
-                <AvatarFallback>{conversation.type == "group"? conversation.groupName.charAt(0) : conversation.members.find(member => member._id !== userId)?.username.charAt(0)}</AvatarFallback>
+                <AvatarImage
+                  src={
+                    conversation.members.find((member) => member._id !== userId)
+                      ?.avatar || ""
+                  }
+                  alt={
+                    conversation.members.find((member) => member._id !== userId)
+                      ?.username || ""
+                  }
+                />
+                <AvatarFallback>
+                  {conversation.type == "group"
+                    ? conversation.groupName.charAt(0)
+                    : conversation.members
+                        .find((member) => member._id !== userId)
+                        ?.username.charAt(0)}
+                </AvatarFallback>
               </Avatar>
               {isOnline && (
                 <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500"></span>
               )}
             </div>
             <div>
-              <h2 className="font-medium">{conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username}</h2>
+              <h2 className="font-medium">
+                {conversation.type == "group"
+                  ? conversation.groupName
+                  : conversation.members.find((member) => member._id !== userId)
+                      ?.username}
+              </h2>
               <p className="text-xs text-muted-foreground">
                 {isOnline ? "Online" : "Offline"}
               </p>
@@ -159,7 +179,19 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => openCall("video", 'user2')}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() =>
+                      openCall(
+                        "audio",
+                        conversation.members.find(
+                          (member) => member._id !== userId
+                        )?._id || ""
+                      )
+                    }
+                  >
                     <Phone className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -170,7 +202,19 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full" onClick={() => openCall("video", conversation.user.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() =>
+                      openCall(
+                        "video",
+                        conversation.members.find(
+                          (member) => member._id !== userId
+                        )?._id || ""
+                      )
+                    }
+                  >
                     <Video className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -185,7 +229,9 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
                     variant="ghost"
                     size="icon"
                     className="rounded-full"
-                    onClick={() => setShowConversationInfo(!showConversationInfo)}
+                    onClick={() =>
+                      setShowConversationInfo(!showConversationInfo)
+                    }
                   >
                     <Info className="h-5 w-5" />
                   </Button>
@@ -202,19 +248,28 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
             {conversation.messages.map((message) => (
               <div
                 key={message.id}
-                className={cn("flex", message.sender === "currentUser" ? "justify-end" : "justify-start")}
+                className={cn(
+                  "flex",
+                  message.sender === "currentUser"
+                    ? "justify-end"
+                    : "justify-start"
+                )}
               >
                 <div
                   className={cn(
                     "max-w-[70%] rounded-lg px-4 py-2",
-                    message.sender === "currentUser" ? "bg-primary text-primary-foreground" : "bg-muted",
+                    message.sender === "currentUser"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
                   )}
                 >
                   <p>{message.content}</p>
                   <div
                     className={cn(
                       "mt-1 flex items-center justify-end gap-1 text-xs",
-                      message.sender === "currentUser" ? "text-primary-foreground/70" : "text-muted-foreground",
+                      message.sender === "currentUser"
+                        ? "text-primary-foreground/70"
+                        : "text-muted-foreground"
                     )}
                   >
                     <span>{message.timestamp}</span>
@@ -263,12 +318,20 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
 
         {/* Message input */}
         <div className="border-t p-4">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+          <form
+            onSubmit={handleSendMessage}
+            className="flex items-center gap-2"
+          >
             <div className="flex items-center gap-1">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" className="rounded-full">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                    >
                       <Paperclip className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
@@ -279,7 +342,12 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" className="rounded-full">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                    >
                       <Image className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
@@ -290,7 +358,12 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" className="rounded-full">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                    >
                       <Mic className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
@@ -328,7 +401,12 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" className="rounded-full">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                    >
                       <AtSign className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
@@ -343,7 +421,12 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
           </form>
         </div>
         {/* Emoji Picker */}
-        {showEmojiPicker && <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />}
+        {showEmojiPicker && (
+          <EmojiPicker
+            onEmojiSelect={handleEmojiSelect}
+            onClose={() => setShowEmojiPicker(false)}
+          />
+        )}
       </div>
 
       {/* Conversation Info Panel - Now on the right side */}
@@ -351,8 +434,14 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
         <ConversationInfo
           user={{
             id: conversation._id,
-            name: conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || "",
-            avatar: conversation.members.find(member => member._id !== userId)?.avatar || "",
+            name:
+              conversation.type == "group"
+                ? conversation.groupName
+                : conversation.members.find((member) => member._id !== userId)
+                    ?.username || "",
+            avatar:
+              conversation.members.find((member) => member._id !== userId)
+                ?.avatar || "",
             status: "online",
           }}
           isGroup={conversation.type == "group"}
@@ -366,9 +455,17 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
       {/* Profile Modal */}
       <ProfileModal
         user={{
-          id: conversation.members.find(member => member._id !== userId)?._id || "",
-          name: conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || "",
-          avatar: conversation.members.find(member => member._id !== userId)?.avatar || "",
+          id:
+            conversation.members.find((member) => member._id !== userId)?._id ||
+            "",
+          name:
+            conversation.type == "group"
+              ? conversation.groupName
+              : conversation.members.find((member) => member._id !== userId)
+                  ?.username || "",
+          avatar:
+            conversation.members.find((member) => member._id !== userId)
+              ?.avatar || "",
           status: "online",
           email: "jane.smith@example.com",
           birthday: "January 15, 1990",
@@ -378,7 +475,7 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
       />
 
       {/* Call Screen */}
-      <CallScreen
+      {/* <CallScreen
         user={{
           id: conversation.members.find(member => member._id !== userId)?._id || "",
           name: conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || "",
@@ -391,22 +488,30 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
 
       {/* Block User Alert */}
       <BlockUserAlert
-        userName={conversation.type == "group"? conversation.groupName : conversation.members.find(member => member._id !== userId)?.username || ""}
+        userName={
+          conversation.type == "group"
+            ? conversation.groupName
+            : conversation.members.find((member) => member._id !== userId)
+                ?.username || ""
+        }
         open={showBlockUserAlert}
         onClose={() => setShowBlockUserAlert(false)}
         onConfirm={() => {
           const deleteChat = async () => {
             try {
-              const isDeleted = await deleteConversation(accessToken || "", conversation._id)
+              const isDeleted = await deleteConversation(
+                accessToken || "",
+                conversation._id
+              );
               if (isDeleted) {
-                router.push("/chat")
-                setShowBlockUserAlert(false)
+                router.push("/chat");
+                setShowBlockUserAlert(false);
               }
             } catch (error) {
-              toast.error("Failed to delete conversation")
+              toast.error("Failed to delete conversation");
             }
-          }
-          deleteChat()
+          };
+          deleteChat();
         }}
       />
 
@@ -417,6 +522,6 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
         onNavigateToMessage={handleNavigateToMessage}
       />
     </div>
-  )
+  );
 }
 

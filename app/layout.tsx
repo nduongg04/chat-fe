@@ -5,7 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { Inter } from "next/font/google";
 import type React from "react";
 import "./globals.css";
-
+import { NotiCall } from "@/components/notiCall";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -24,6 +24,7 @@ export default function RootLayout({
 				<SessionProvider>
 					<ThemeProvider>{children}</ThemeProvider>
 					<Toaster />
+					<NotiCall />
 				</SessionProvider>
 			</body>
 		</html>

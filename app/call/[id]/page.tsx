@@ -10,20 +10,35 @@ interface User {
   avatar: string;
   status: string;
 }
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 export default function CallPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    // Trong thực tế, bạn sẽ fetch thông tin user từ API dựa vào params.id
-    setUser({
-      id: params.id as string,
-      name: "User Name",
-      avatar: "/placeholder.svg",
-      status: "online",
-    });
-  }, [params.id]);
+
+ useEffect(() => {
+   const fetchUser = async () => {
+     try {
+       const response = await fetch(`${API_URL}/users/${params.id}`);
+       if (!response.ok) {
+         throw new Error("Network response was not ok");
+       }
+       const data = await response.json();
+       setUser({
+        id: data.data.user.id,
+        name: data.data.user.username,
+        avatar: data.data.user.avatar,
+        status: data.data.user.status,
+       });
+       console.log(data);
+     } catch (error) {
+       console.error("Failed to fetch:", error);
+     }
+   };
+
+   fetchUser();
+ }, [params.id]);
 
   if (!user) return <div>Loading...</div>;
 

@@ -5,6 +5,7 @@ import { Mic, MicOff, Phone, Video, VideoOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import io, { Socket } from "socket.io-client";
+import { useSession } from "next-auth/react";
 
 interface User {
   id: string;
@@ -20,6 +21,8 @@ interface CallScreenProps {
 }
 
 export function CallScreen({ user, callType, open, onClose }: CallScreenProps) {
+   const { data: session, status } = useSession();
+   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(callType === "video");
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -30,9 +33,21 @@ export function CallScreen({ user, callType, open, onClose }: CallScreenProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidate[]>([]);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const [checkSession, setCheckSession] = useState(false);
+  // console.log("session", session);
+  // console.log("id",session?.user.id)
+  // console.log("userId",userId)
+  useEffect(() => {
+    if (status === "authenticated") {
+      console.log("session", session);
+      setUserId(session?.user.id);
+    }
+  }, [status, session]);
   const getUserMedia = async () => {
+    console.log("getUserMedia");
+   
     // Yêu cầu quyền truy cập dựa vào user
-    if (user.id === "user1") {
+    if (user.id == "67f5484b513be7879f3d86fc") {
       const constraints = {
         audio: {
           echoCancellation: true,
@@ -78,278 +93,287 @@ export function CallScreen({ user, callType, open, onClose }: CallScreenProps) {
   };
 
   useEffect(() => {
-    // 1. Khởi tạo PeerConnection
-    const configuration = {
-      iceServers: [
-        {
-          urls: [
-            "stun:stun.l.google.com:19302",
-            "stun:stun1.l.google.com:19302",
-            "stun:stun2.l.google.com:19302",
-            "stun:stun3.l.google.com:19302",
-            "stun:stun4.l.google.com:19302",
-          ],
-        },
-        {
-          urls: "turn:relay.metered.ca:80",
-          username: "openrelayproject",
-          credential: "openrelayproject",
-        },
-      ],
-      iceTransportPolicy: "all",
-      bundlePolicy: "max-bundle",
-      rtcpMuxPolicy: "require",
-      // Thêm các tùy chọn để tăng khả năng tương thích
-      iceCandidatePoolSize: 10,
-    };
-
-    peerConnectionRef.current = new RTCPeerConnection(configuration as RTCConfiguration);
-
-    // 2. Khởi tạo Socket
-    const socket = io("http://localhost:8080", {
-      transports: ["websocket"],
-    });
-    // 3. ICE candidate handler
-    peerConnectionRef.current.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log("User1 found ICE candidate:", event.candidate);
-        socket.emit("candidate", {
-          senderId: user.id,
-          recipientId: user.id === "user1" ? "user2" : "user1",
-          candidate: event.candidate,
-        });
-      } else {
-        console.log(
-          "User1 ICE gathering completed, candidates in SDP:",
-          peerConnectionRef.current?.localDescription?.sdp.includes(
-            "a=candidate"
-          )
-        );
-      }
-    };
     
-    peerConnectionRef.current.addEventListener(
-      "connectionstatechange",
-      async () => {
+    if(!checkSession && userId ){
+      console.log("userId22", userId);
+      setCheckSession(true);
+      // 1. Khởi tạo PeerConnection
+      const configuration = {
+        iceServers: [
+          {
+            urls: [
+              "stun:stun.l.google.com:19302",
+              "stun:stun1.l.google.com:19302",
+              "stun:stun2.l.google.com:19302",
+              "stun:stun3.l.google.com:19302",
+              "stun:stun4.l.google.com:19302",
+            ],
+          },
+          {
+            urls: "turn:relay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+        ],
+        iceTransportPolicy: "all",
+        bundlePolicy: "max-bundle",
+        rtcpMuxPolicy: "require",
+        // Thêm các tùy chọn để tăng khả năng tương thích
+        iceCandidatePoolSize: 10,
+      };
+
+      peerConnectionRef.current = new RTCPeerConnection(
+        configuration as RTCConfiguration
+      );
+
+      // 2. Khởi tạo Socket
+      const socket = io("http://localhost:8080", {
+        transports: ["websocket"],
+      });
+      // 3. ICE candidate handler
+      peerConnectionRef.current.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log("User1 found ICE candidate:", event.candidate);
+          socket.emit("candidate", {
+            senderId: userId,
+            recipientId: user.id,
+            candidate: event.candidate,
+          });
+        } else {
+          console.log(
+            "User1 ICE gathering completed, candidates in SDP:",
+            peerConnectionRef.current?.localDescription?.sdp.includes(
+              "a=candidate"
+            )
+          );
+        }
+      };
+
+      peerConnectionRef.current.addEventListener(
+        "connectionstatechange",
+        async () => {
+          console.log(
+            "Connection state:",
+            peerConnectionRef.current?.connectionState
+          );
+          if (peerConnectionRef.current?.connectionState === "connected") {
+            const stats = await peerConnectionRef.current?.getStats();
+            stats.forEach((report) => {
+              if (report.type === "outbound-rtp" && report.kind === "audio") {
+                console.log("✅ Audio track is being sent:", report);
+              }
+            });
+          }
+        }
+      );
+
+      peerConnectionRef.current.onicegatheringstatechange = () => {
         console.log(
-          "Connection state:",
+          "ICE Gathering State:",
+          peerConnectionRef.current?.iceGatheringState
+        );
+      };
+
+      peerConnectionRef.current.onsignalingstatechange = () => {
+        console.log(
+          "Signaling State:",
+          peerConnectionRef.current?.signalingState
+        );
+      };
+      peerConnectionRef.current.onconnectionstatechange = () => {
+        console.log(
+          "Connection state changed:",
           peerConnectionRef.current?.connectionState
         );
-        if (peerConnectionRef.current?.connectionState === "connected") {
-          const stats = await peerConnectionRef.current?.getStats();
-          stats.forEach((report) => {
-            if (report.type === "outbound-rtp" && report.kind === "audio") {
-              console.log("✅ Audio track is being sent:", report);
-            }
-          });
+      };
+
+      peerConnectionRef.current.oniceconnectionstatechange = () => {
+        console.log(
+          "ICE connection state:",
+          peerConnectionRef.current?.iceConnectionState
+        );
+      };
+
+      // Thêm log cho tracks và set remote stream
+      peerConnectionRef.current.ontrack = (event) => {
+        console.log("Track received:", {
+          kind: event.track.kind,
+          streamId: event.streams[0]?.id,
+          trackId: event.track.id,
+        });
+
+        if (!event.streams[0]) return;
+        console.log("event.streams", event.streams);
+        event.track.onmute = () => {
+          console.log("Remote video đã tắt");
+        };
+
+        event.track.onunmute = () => {
+          console.log("Remote video đã bật");
+        };
+        if (event.track.kind === "audio") {
+          console.log("Setting remote audio stream...", event.streams[0]);
+          remoteAudioRef.current!.srcObject = event.streams[0];
         }
-      }
-    );
+        if (event.track.kind === "video") {
+          console.log("Setting remote video stream...", event.streams[0]);
+          remoteVideoRef.current!.srcObject = event.streams[0];
+        }
+      };
+      // 4. Lấy media và khởi tạo call
+      const initializeCall = async () => {
+        try {
+          console.log("initializeCall", user.id);
+          if (user.id == "67f5484b513be7879f3d86fc") {
+            await getUserMedia();
+            console.log("Creating offer...");
+            const offer = await peerConnectionRef.current!.createOffer({
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: true,
+              iceRestart: true,
+            });
+            console.log("offer", offer);
 
-    peerConnectionRef.current.onicegatheringstatechange = () => {
-      console.log(
-        "ICE Gathering State:",
-        peerConnectionRef.current?.iceGatheringState
-      );
-    };
+            // Set local description
+            await peerConnectionRef.current!.setLocalDescription(offer);
+            // Đợi 2 giây để đảm bảo quá trình khởi tạo hoàn tất
+            await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    peerConnectionRef.current.onsignalingstatechange = () => {
-      console.log(
-        "Signaling State:",
-        peerConnectionRef.current?.signalingState
-      );
-    };
-    peerConnectionRef.current.onconnectionstatechange = () => {
-      console.log(
-        "Connection state changed:",
-        peerConnectionRef.current?.connectionState
-      );
-    };
+            socket.emit("offer", {
+              senderId: userId,
+              recipientId: user.id,
+              offer: peerConnectionRef.current!.localDescription,
+            });
+          }
+        } catch (error) {
+          console.error("Error in initializeCall:", error);
+        }
+      };
 
-    peerConnectionRef.current.oniceconnectionstatechange = () => {
-      console.log(
-        "ICE connection state:",
-        peerConnectionRef.current?.iceConnectionState
-      );
-    };
+      // 1. Tách riêng việc xử lý candidate
+      const processIceCandidate = async (candidate: RTCIceCandidate) => {
+        try {
+          if (peerConnectionRef.current?.remoteDescription) {
+            // Nếu đã có remote description thì add candidate ngay
+            await peerConnectionRef.current.addIceCandidate(candidate);
+            console.log("Added ICE candidate");
+          } else {
+            // Nếu chưa có remote description thì queue lại
+            console.log("Queueing ICE candidate");
+            pendingCandidatesRef.current.push(candidate);
+          }
+        } catch (error) {
+          console.error("Error processing ICE candidate:", error);
+        }
+      };
 
-    // Thêm log cho tracks và set remote stream
-    peerConnectionRef.current.ontrack = (event) => {
-      console.log("Track received:", {
-        kind: event.track.kind,
-        streamId: event.streams[0]?.id,
-        trackId: event.track.id,
+      // 2. Socket listeners
+      console.log("socket", socket);
+      socket.on("offer", async (data) => {
+        if (data.recipientId !== userId) return;
+        console.log("✅ offer user 1:", data.offer.sdp);
+
+        try {
+          // Sau đó mới set remote description và tạo answer
+          await peerConnectionRef.current!.setRemoteDescription(
+            new RTCSessionDescription(data.offer)
+          );
+
+          const answer = await peerConnectionRef.current!.createAnswer();
+          await peerConnectionRef.current!.setLocalDescription(answer);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          console.log("answer", answer.sdp);
+          socket.emit("answer", {
+            senderId: userId,
+            recipientId: data.senderId,
+            answer: answer,
+          });
+        } catch (error) {
+          console.error("Error handling offer:", error);
+        }
       });
 
-      if (!event.streams[0]) return;
-      console.log("event.streams", event.streams);
-      event.track.onmute = () => {
-        console.log("Remote video đã tắt");
-      };
+      socket.on("answer", async (data) => {
+        if (data.recipientId !== userId) return;
+        console.log("✅ User1 nhận answer từ user2:", data);
 
-      event.track.onunmute = () => {
-        console.log("Remote video đã bật");
-      };
-      if (event.track.kind === "audio") {
-        console.log("Setting remote audio stream...", event.streams[0]);
-        remoteAudioRef.current!.srcObject = event.streams[0];
-      }
-      if (event.track.kind === "video") {
-        console.log("Setting remote video stream...", event.streams[0]);
-        remoteVideoRef.current!.srcObject = event.streams[0];
-        
-      }
-    };
-    // 4. Lấy media và khởi tạo call
-    const initializeCall = async () => {
-      try {
-        if (user.id === "user1") {
-          await getUserMedia();
-          console.log("Creating offer...");
-          const offer = await peerConnectionRef.current!.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true,
-            iceRestart: true,
-          });
-
-          // Set local description
-          await peerConnectionRef.current!.setLocalDescription(offer);
-          // Đợi 2 giây để đảm bảo quá trình khởi tạo hoàn tất
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          
-          socket.emit("offer", {
-            senderId: user.id,
-            recipientId: "user2",
-            offer: peerConnectionRef.current!.localDescription,
-          });
+        if (!peerConnectionRef.current) {
+          console.error("PeerConnection chưa được khởi tạo!");
+          return;
         }
-      } catch (error) {
-        console.error("Error in initializeCall:", error);
-      }
-    };
 
-    // 1. Tách riêng việc xử lý candidate
-    const processIceCandidate = async (candidate: RTCIceCandidate) => {
-      try {
-        if (peerConnectionRef.current?.remoteDescription) {
-          // Nếu đã có remote description thì add candidate ngay
-          await peerConnectionRef.current.addIceCandidate(candidate);
-          console.log("Added ICE candidate");
-        } else {
-          // Nếu chưa có remote description thì queue lại
-          console.log("Queueing ICE candidate");
-          pendingCandidatesRef.current.push(candidate);
-        }
-      } catch (error) {
-        console.error("Error processing ICE candidate:", error);
-      }
-    };
-
-    // 2. Socket listeners
-    socket.on("offer", async (data) => {
-      if (data.recipientId !== user.id) return;
-      console.log("✅ offer user 1:", data.offer.sdp);
-
-      try {
-        // Sau đó mới set remote description và tạo answer
-        await peerConnectionRef.current!.setRemoteDescription(
-          new RTCSessionDescription(data.offer)
-        );
-
-        const answer = await peerConnectionRef.current!.createAnswer();
-        await peerConnectionRef.current!.setLocalDescription(answer);
-         await new Promise((resolve) => setTimeout(resolve, 2000));
-        console.log("answer", answer.sdp);
-        socket.emit("answer", {
-          senderId: user.id,
-          recipientId: data.senderId,
-          answer: answer,
-        });
-      } catch (error) {
-        console.error("Error handling offer:", error);
-      }
-    });
-
-    socket.on("answer", async (data) => {
-      if (data.recipientId !== user.id) return;
-      console.log("✅ User1 nhận answer từ user2:", data);
-
-      if (!peerConnectionRef.current) {
-        console.error("PeerConnection chưa được khởi tạo!");
-        return;
-      }
-
-      try {
-        // 1. Thiết lập remote description (answer từ user2)
-        await peerConnectionRef.current.setRemoteDescription(
-          new RTCSessionDescription(data.answer)
-        );
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        console.log("🔄 User1 đã setRemoteDescription thành công");
-        // Kiểm tra trạng thái ICE
-        console.log(
-          "ICE Gathering State sau khi nhận answer:",
-          peerConnectionRef.current!.iceGatheringState
-        );
-
-        // 2. Xử lý các ICE candidates đã nhận trước đó (nếu có)
-        if (pendingCandidatesRef.current.length > 0) {
-          console.log(
-            `📦 User1 xử lý ${pendingCandidatesRef.current.length} candidates đang chờ...`
+        try {
+          // 1. Thiết lập remote description (answer từ user2)
+          await peerConnectionRef.current.setRemoteDescription(
+            new RTCSessionDescription(data.answer)
           );
-          for (const candidate of pendingCandidatesRef.current) {
-            try {
-              await peerConnectionRef.current.addIceCandidate(candidate);
-              console.log("➕ User1 thêm candidate từ user2:", candidate);
-            } catch (err) {
-              console.error("❌ User1 không thể thêm candidate:", err);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          console.log("🔄 User1 đã setRemoteDescription thành công");
+          // Kiểm tra trạng thái ICE
+          console.log(
+            "ICE Gathering State sau khi nhận answer:",
+            peerConnectionRef.current!.iceGatheringState
+          );
+
+          // 2. Xử lý các ICE candidates đã nhận trước đó (nếu có)
+          if (pendingCandidatesRef.current.length > 0) {
+            console.log(
+              `📦 User1 xử lý ${pendingCandidatesRef.current.length} candidates đang chờ...`
+            );
+            for (const candidate of pendingCandidatesRef.current) {
+              try {
+                await peerConnectionRef.current.addIceCandidate(candidate);
+                console.log("➕ User1 thêm candidate từ user2:", candidate);
+              } catch (err) {
+                console.error("❌ User1 không thể thêm candidate:", err);
+              }
             }
+            pendingCandidatesRef.current = []; // Xóa hàng đợi
           }
-          pendingCandidatesRef.current = []; // Xóa hàng đợi
-        }
 
-        // 3. Kích hoạt gửi ICE candidates (nếu chưa tự động)
-        if (peerConnectionRef.current.iceGatheringState === "gathering") {
-          console.log("🚀 User1 bắt đầu gửi ICE candidates cho user2");
+          // 3. Kích hoạt gửi ICE candidates (nếu chưa tự động)
+          if (peerConnectionRef.current.iceGatheringState === "gathering") {
+            console.log("🚀 User1 bắt đầu gửi ICE candidates cho user2");
+          }
+        } catch (error) {
+          console.error("❌ User1 xử lý answer thất bại:", error);
         }
-      } catch (error) {
-        console.error("❌ User1 xử lý answer thất bại:", error);
+      });
+
+      socket.on("candidate", async (data) => {
+        if (data.recipientId !== user.id) return;
+        console.log("Received ICE candidate from:", data.senderId);
+        await processIceCandidate(data.candidate);
+      });
+
+      socket.on("enable-video", async (data) => {
+        console.log("enable-video", data);
+        if (data.recipientId !== userId) return;
+        setEnableRemoteVideo(data.enable);
+      });
+      socket.on("end-call", async (data) => {
+        if (data.recipientId !== user.id) return;
+        endCall();
+      });
+      setSocket(socket);
+      if (open && userId) {
+        initializeCall();
       }
-    });
-
-    socket.on("candidate", async (data) => {
-      if (data.recipientId !== user.id) return;
-      console.log("Received ICE candidate from:", data.senderId);
-      await processIceCandidate(data.candidate);
-    });
-
-    socket.on("enable-video", async (data) => {
-      console.log("enable-video", data);
-      if (data.recipientId !== user.id) return;
-      setEnableRemoteVideo(data.enable);
-    });
-    socket.on("end-call", async (data) => {
-      if (data.recipientId !== user.id) return;
-      endCall();
-    });
-
-    setSocket(socket);
-    if (open) {
-      initializeCall();
+      // 6. Cleanup
+      return () => {
+        // if (!checkSession) {
+        //   if (streamRef.current) {
+        //     streamRef.current.getTracks().forEach((track) => track.stop());
+        //   }
+        //   if (peerConnectionRef.current) {
+        //     peerConnectionRef.current.close();
+        //   }
+        //   socket?.disconnect();
+        // }
+      };
     }
-
-    // 6. Cleanup
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-      }
-      socket.disconnect();
-    };
-  }, [user, open]);
+  }, [user, open,status, session]);
   
   const toggleMic = () => {
     if (streamRef.current) {
@@ -363,8 +387,8 @@ export function CallScreen({ user, callType, open, onClose }: CallScreenProps) {
 
   const toggleCamera = () => {
     socket?.emit("enable-video", {
-      senderId: user.id,
-      recipientId: user.id === "user1" ? "user2" : "user1",
+      senderId: userId,
+      recipientId: user.id,
       enable: !cameraEnabled,
     });
     if (streamRef.current) {
@@ -430,7 +454,7 @@ export function CallScreen({ user, callType, open, onClose }: CallScreenProps) {
       console.log("Video bị treo");
     };
   }
-
+  if (status === "loading") return <div>Loading...</div>;
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Phần main content - bỏ padding để tránh scroll */}
@@ -438,15 +462,14 @@ export function CallScreen({ user, callType, open, onClose }: CallScreenProps) {
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <div className="h-full w-full bg-black">
             {/* Video chính - bỏ rounded ở full screen */}
-            <audio ref={remoteAudioRef} autoPlay hidden />;
+            <audio ref={remoteAudioRef} autoPlay hidden />
             <div className="relative h-full w-full">
              
                 <div hidden={enableRemoteVideo} className="w-full h-full flex items-center justify-center flex-col gap-2">
                   <Avatar className="h-24 w-24">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <p className="text-base font-medium text-muted">
+                  <p className="text-base font-medium text-white">
                     {user.name}
                   </p>
                 </div>
@@ -473,8 +496,7 @@ export function CallScreen({ user, callType, open, onClose }: CallScreenProps) {
                  
                     <div hidden={cameraEnabled} className="flex items-center justify-center h-full w-full bg-muted">
                       <Avatar className="h-18 w-18 border-2 border-gray-300">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={session?.user.avatar || ""} alt={session?.user.name || ""} />
                       </Avatar>
                     </div>
 
