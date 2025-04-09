@@ -33,7 +33,7 @@ import { BlockUserAlert } from "@/components/block-user-alert";
 import { SearchConversation } from "@/components/search-conversation";
 import { ConversationInfo } from "@/components/conversation-info";
 import { EmojiPicker } from "@/components/emoji-picker";
-import { ChatRoom, Message } from "@/types/chat";
+import { ChatRoom, Member, Message } from "@/types/chat";
 import { deleteConversation } from "@/services/chatService";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -65,6 +65,11 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
   const { data: session } = useSession();
   const accessToken = session?.user.accessToken;
   const userId = session?.user.id;
+  const user: Member = {
+    _id: session?.user.id!,
+    username: session?.user.username!,
+    avatar: session?.user.avatar,
+  };
   const router = useRouter();
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -119,7 +124,9 @@ const normalizeOneMessage = (data: any): Message => {
     });
 
     setSocket(newSocket);
-
+    console.log('session',session)
+    console.log('user',user);
+    
     // Join room with correct room name
     newSocket.emit("join_chat", {
       chatId: conversation._id,
@@ -333,7 +340,7 @@ const normalizeOneMessage = (data: any): Message => {
         <div className="flex-1 overflow-y-auto p-4">
           <div className="space-y-4">
             {conversation.messages.map((message) => (
-              <MessageItem currentUser={userId!} message={message} />
+              <MessageItem currentUser={user} room={conversation} message={message} />
             ))}
 
             {/* Typing indicator */}

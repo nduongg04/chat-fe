@@ -1,21 +1,28 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Message } from "@/types/chat";
+import { ChatRoom, Member, Message } from "@/types/chat";
 
 interface MessageItemProps {
-  currentUser: string;
+  currentUser: Member;
   message: Message;
+  room: ChatRoom;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ currentUser, message }) => {
+const MessageItem: React.FC<MessageItemProps> = ({
+  currentUser,
+  message,
+  room,
+}) => {
+  const sender = room.members.find((sender) => sender._id === message.senderId);
+
   const renderContent = () => {
     switch (message.messageType) {
       case "text":
         return (
           <div
             className={cn(
-              "max-w-[70%] rounded-lg px-4 py-2",
-              message.senderId === currentUser
+              "w-fit rounded-lg px-4 py-2",
+              message.senderId === currentUser._id
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted"
             )}
@@ -24,13 +31,13 @@ const MessageItem: React.FC<MessageItemProps> = ({ currentUser, message }) => {
             <div
               className={cn(
                 "mt-1 flex items-center justify-end gap-1 text-xs",
-                message.senderId === currentUser
+                message.senderId === currentUser._id
                   ? "text-primary-foreground/70"
                   : "text-muted-foreground"
               )}
             >
               <span>{message.timestamp}</span>
-              {message.senderId === currentUser && (
+              {message.senderId === currentUser._id && (
                 <span>
                   {message.status === "read" && "✓✓"}
                   {message.status === "delivered" && "✓✓"}
@@ -49,7 +56,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ currentUser, message }) => {
             alt="sent image"
             className="max-w-xs rounded-lg"
           />
-          
         );
 
       case "video":
@@ -82,10 +88,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ currentUser, message }) => {
       key={message.id}
       className={cn(
         "flex",
-        message.senderId === currentUser ? "justify-end" : "justify-start"
+        message.senderId === currentUser._id ? "justify-end" : "justify-start"
       )}
     >
-      {renderContent()}
+      <div className="flex flex-col max-w-1/2">
+        {sender?._id !== currentUser._id && (
+          <div className="text-xs text-gray-400">{sender?.username}</div>
+        )}
+        {renderContent()}
+      </div>
     </div>
   );
 };
