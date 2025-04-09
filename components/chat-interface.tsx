@@ -27,24 +27,21 @@ import {
 import { cn } from "@/lib/utils";
 
 // Add these imports at the top
-import { ProfileModal } from "@/components/profile-modal"
-//import { CallScreen } from "@/components/call-screen"
-import { BlockUserAlert } from "@/components/block-user-alert"
-import { SearchConversation } from "@/components/search-conversation"
-import { ConversationInfo } from "@/components/conversation-info"
-import { EmojiPicker } from "@/components/emoji-picker"
-import { ChatRoom } from "@/types/chat"
-import { deleteConversation } from "@/services/chatService"
-import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { toast } from "sonner"
-interface Message {
-  id: string
-  sender: string
-  content: string
-  timestamp: string
-  status: "sending" | "sent" | "delivered" | "read"
-}
+import { ProfileModal } from "@/components/profile-modal";
+import { CallScreen } from "@/components/call-screen";
+import { BlockUserAlert } from "@/components/block-user-alert";
+import { SearchConversation } from "@/components/search-conversation";
+import { ConversationInfo } from "@/components/conversation-info";
+import { EmojiPicker } from "@/components/emoji-picker";
+import { ChatRoom, Member, Message } from "@/types/chat";
+import { deleteConversation } from "@/services/chatService";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { io, Socket } from "socket.io-client";
+import { date } from "zod";
+import MessageItem from "./message-item";
+import axios from "axios";
 
 interface User {
   id: string;
@@ -106,18 +103,18 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
     );
   };
 
-const normalizeOneMessage = (data: any): Message => {
-  return {
-    id: data._id,
-    chatId: data.chatId,
-    senderId: data.senderId,
-    messageType: data.messageType,
-    content: data.content,
-    fileUrl: data.fileUrl[0],
-    timestamp: data.createdAt,
-    status: data.readBy.length > 1 ? "read" : "sent",
+  const normalizeOneMessage = (data: any): Message => {
+    return {
+      id: data._id,
+      chatId: data.chatId,
+      senderId: data.senderId,
+      messageType: data.messageType,
+      content: data.content,
+      fileUrl: data.fileUrl[0],
+      timestamp: data.createdAt,
+      status: data.readBy.length > 1 ? "read" : "sent",
+    };
   };
-};
   // Verify socket
   useEffect(() => {
     if (!accessToken) return;
@@ -127,16 +124,16 @@ const normalizeOneMessage = (data: any): Message => {
     });
 
     setSocket(newSocket);
-    console.log('session',session)
-    console.log('user',user);
-    
+    console.log("session", session);
+    console.log("user", user);
+
     // Join room with correct room name
     newSocket.emit("join_chat", {
       chatId: conversation._id,
       token: accessToken,
     });
     newSocket.on("load_chat", (data) => {
-       // console.log('data',data.data);
+      // console.log('data',data.data);
       //  console.log("data type", typeof(data.data));
       const normalizedMessages = normalizeMessages(data.data);
       conversation.messages = normalizedMessages;
@@ -145,7 +142,7 @@ const normalizeOneMessage = (data: any): Message => {
     newSocket.on("receive", (data) => {
       console.log("msg data", data);
       const normalizedMessage = normalizeOneMessage(data.data);
-      console.log('msg',normalizedMessage);
+      console.log("msg", normalizedMessage);
       conversation.messages.push(normalizedMessage);
       setForceUpdate((prev) => !prev);
     });
@@ -211,7 +208,7 @@ const normalizeOneMessage = (data: any): Message => {
       form.append("messageType", "image");
       form.append("file", file);
       //console.log('form',form);
-      
+
       try {
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL!}/messages/send`,
@@ -225,8 +222,7 @@ const normalizeOneMessage = (data: any): Message => {
         socket.emit("send_image", response.data);
         console.log("image msg", response.data.data);
       } catch (error) {
-        console.log('error', error);
-        
+        console.log("error", error);
       }
     });
 
@@ -241,13 +237,13 @@ const normalizeOneMessage = (data: any): Message => {
   // Add this function to handle message navigation
   const handleNavigateToMessage = (messageId: string) => {
     // In a real app, this would scroll to the message
-    console.log("Navigating to message:", messageId)
-  }
-  const openCall = (callType: "audio" | "video", id: string) => {
-    console.log("Opening call:", callType, id)
-    const url = `/call/${id}?type=${callType}`
-    window.open(url, "_blank", "width=800,height=600")
-  }
+    console.log("Navigating to message:", messageId);
+  };
+const openCall = (callType: "audio" | "video", id: string) => {
+  console.log("Opening call:", callType, id);
+  const url = `/call/${id}?type=${callType}`;
+  window.open(url, "_blank", "width=800,height=600");
+};
   return (
     <div className="flex h-full flex-1">
       <div className="flex flex-1 flex-col">
@@ -361,7 +357,11 @@ const normalizeOneMessage = (data: any): Message => {
         <div className="flex-1 overflow-y-auto p-4">
           <div className="space-y-4">
             {conversation.messages.map((message) => (
-              <MessageItem currentUser={user} room={conversation} message={message} />
+              <MessageItem
+                currentUser={user}
+                room={conversation}
+                message={message}
+              />
             ))}
 
             {/* Typing indicator */}
