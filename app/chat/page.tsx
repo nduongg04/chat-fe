@@ -2,6 +2,7 @@
 
 import { ChatSidebar } from "@/components/chat-sidebar"
 import { useSession } from "next-auth/react";
+import React from "react"
 export default function ChatPage() {
   const {data: session} = useSession();
   const accessToken = session?.user.accessToken;

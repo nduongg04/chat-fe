@@ -277,7 +277,11 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
     // In a real app, this would scroll to the message
     console.log("Navigating to message:", messageId);
   };
-
+const openCall = (callType: "audio" | "video", id: string) => {
+  console.log("Opening call:", callType, id);
+  const url = `/call/${id}?type=${callType}`;
+  window.open(url, "_blank", "width=800,height=600");
+};
   return (
     <div className="flex h-full flex-1">
       <div className="flex flex-1 flex-col">
@@ -328,7 +332,14 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
                     variant="ghost"
                     size="icon"
                     className="rounded-full"
-                    onClick={() => setInCall("audio")}
+                    onClick={() =>
+                      openCall(
+                        "audio",
+                        conversation.members.find(
+                          (member) => member._id !== userId
+                        )?._id || ""
+                      )
+                    }
                   >
                     <Phone className="h-5 w-5" />
                   </Button>
@@ -344,7 +355,14 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
                     variant="ghost"
                     size="icon"
                     className="rounded-full"
-                    onClick={() => setInCall("video")}
+                    onClick={() =>
+                      openCall(
+                        "video",
+                        conversation.members.find(
+                          (member) => member._id !== userId
+                        )?._id || ""
+                      )
+                    }
                   >
                     <Video className="h-5 w-5" />
                   </Button>
@@ -583,7 +601,7 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
       />
 
       {/* Call Screen */}
-      <CallScreen
+      {/* <CallScreen
         user={{
           id:
             conversation.members.find((member) => member._id !== userId)?._id ||
@@ -600,7 +618,7 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
         callType={inCall === "audio" ? "audio" : "video"}
         open={!!inCall}
         onClose={() => setInCall(false)}
-      />
+      /> */}
 
       {/* Block User Alert */}
       <BlockUserAlert
