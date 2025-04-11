@@ -103,18 +103,18 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
     );
   };
 
-const normalizeOneMessage = (data: any): Message => {
-  return {
-    id: data._id,
-    chatId: data.chatId,
-    senderId: data.senderId,
-    messageType: data.messageType,
-    content: data.content,
-    fileUrl: data.fileUrl[0],
-    timestamp: data.createdAt,
-    status: data.readBy.length > 1 ? "read" : "sent",
+  const normalizeOneMessage = (data: any): Message => {
+    return {
+      id: data._id,
+      chatId: data.chatId,
+      senderId: data.senderId,
+      messageType: data.messageType,
+      content: data.content,
+      fileUrl: data.fileUrl[0],
+      timestamp: data.createdAt,
+      status: data.readBy.length > 1 ? "read" : "sent",
+    };
   };
-};
   // Verify socket
   useEffect(() => {
     if (!accessToken) return;
@@ -124,33 +124,66 @@ const normalizeOneMessage = (data: any): Message => {
     });
 
     setSocket(newSocket);
-    console.log('session',session)
-    console.log('user',user);
-    
+    console.log("session", session);
+    console.log("user", user);
+
     // Join room with correct room name
     newSocket.emit("join_chat", {
       chatId: conversation._id,
       token: accessToken,
     });
     newSocket.on("load_chat", (data) => {
-       // console.log('data',data.data);
+      // console.log('data',data.data);
       //  console.log("data type", typeof(data.data));
       const normalizedMessages = normalizeMessages(data.data);
       conversation.messages = normalizedMessages;
       setForceUpdate((prev) => !prev);
     });
+    // Receive message after send
     newSocket.on("receive", (data) => {
       console.log("msg data", data);
       const normalizedMessage = normalizeOneMessage(data.data);
-      console.log('msg',normalizedMessage);
-      conversation.messages.push(normalizedMessage);
-      setForceUpdate((prev) => !prev);
+      console.log("msg", normalizedMessage);
+      if (normalizedMessage.senderId !== user._id) {
+        conversation.messages.push(normalizedMessage);
+        setForceUpdate((prev) => !prev);
+        newSocket.emit("mark_read", { ...normalizedMessage, ...user });
+        console.log('mark here', {...normalizedMessage, ...user});        
+      }
+      if (normalizedMessage.senderId === user._id) {
+        const index = conversation.messages.findIndex(
+          (m) => m.id === data.tempId
+        );
+        console.log("index", index);
+
+        if (index !== -1) {
+          conversation.messages[index] = normalizedMessage;
+          console.log("reset msg", conversation.messages[index]);
+        }
+        setForceUpdate((prev) => !prev);
+      }
+    });
+
+    // Receive message after read
+    newSocket.on("readmsg", (data) => {
+      console.log("msg update data", data);
+      const normalizedMessage = normalizeOneMessage(data.data);
+      console.log("msg update", normalizedMessage);
+      if (normalizedMessage.senderId === user._id) {
+        const index = conversation.messages.findIndex(
+          (m) => m.id === normalizedMessage.id
+        );
+        if (index !== -1) {
+          conversation.messages[index] = normalizedMessage;
+        }
+        setForceUpdate((prev) => !prev);
+      }
     });
 
     return () => {
       newSocket.disconnect();
     };
-  }, [accessToken, conversation._id]);
+  }, [accessToken, conversation.messages]);
 
   // Simulate typing indicator
   useEffect(() => {
@@ -208,7 +241,7 @@ const normalizeOneMessage = (data: any): Message => {
       form.append("messageType", "image");
       form.append("file", file);
       //console.log('form',form);
-      
+
       try {
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL!}/messages/send`,
@@ -222,8 +255,7 @@ const normalizeOneMessage = (data: any): Message => {
         socket.emit("send_image", response.data);
         console.log("image msg", response.data.data);
       } catch (error) {
-        console.log('error', error);
-        
+        console.log("error", error);
       }
     });
 
@@ -340,7 +372,11 @@ const normalizeOneMessage = (data: any): Message => {
         <div className="flex-1 overflow-y-auto p-4">
           <div className="space-y-4">
             {conversation.messages.map((message) => (
-              <MessageItem currentUser={user} room={conversation} message={message} />
+              <MessageItem
+                currentUser={user}
+                room={conversation}
+                message={message}
+              />
             ))}
 
             {/* Typing indicator */}
