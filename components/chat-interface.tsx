@@ -72,6 +72,7 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
   };
   const router = useRouter();
   const [newMessage, setNewMessage] = useState("");
+  const [lastMessage, setLastMessage] = useState<Message | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showConversationInfo, setShowConversationInfo] = useState(false);
@@ -135,55 +136,59 @@ export function ChatInterface({ conversation, isOnline }: ChatInterfaceProps) {
     newSocket.on("load_chat", (data) => {
       // console.log('data',data.data);
       //  console.log("data type", typeof(data.data));
+      console.log("Have a Load");
+
       const normalizedMessages = normalizeMessages(data.data);
       conversation.messages = normalizedMessages;
       setForceUpdate((prev) => !prev);
     });
+
     // Receive message after send
     newSocket.on("receive", (data) => {
-      console.log("msg data", data);
+      // console.log("msg data", data);
       const normalizedMessage = normalizeOneMessage(data.data);
-      console.log("msg", normalizedMessage);
+      // console.log("msg", normalizedMessage);
       if (normalizedMessage.senderId !== user._id) {
         conversation.messages.push(normalizedMessage);
         setForceUpdate((prev) => !prev);
+        setLastMessage(normalizedMessage);
         newSocket.emit("mark_read", { ...normalizedMessage, ...user });
-        console.log('mark here', {...normalizedMessage, ...user});        
+        // console.log("mark here", { ...normalizedMessage, ...user });
       }
       if (normalizedMessage.senderId === user._id) {
         const index = conversation.messages.findIndex(
           (m) => m.id === data.tempId
         );
-        console.log("index", index);
+        // console.log("index", index);
 
         if (index !== -1) {
           conversation.messages[index] = normalizedMessage;
-          console.log("reset msg", conversation.messages[index]);
+          // console.log("reset msg", conversation.messages[index]);
+          setLastMessage(normalizedMessage);
         }
         setForceUpdate((prev) => !prev);
       }
     });
 
     // Receive message after read
-    newSocket.on("readmsg", (data) => {
-      console.log("msg update data", data);
-      const normalizedMessage = normalizeOneMessage(data.data);
-      console.log("msg update", normalizedMessage);
-      if (normalizedMessage.senderId === user._id) {
-        const index = conversation.messages.findIndex(
-          (m) => m.id === normalizedMessage.id
-        );
-        if (index !== -1) {
-          conversation.messages[index] = normalizedMessage;
-        }
-        setForceUpdate((prev) => !prev);
+    newSocket.on("update_message_stt", (data) => {
+      // console.log("msg update data", data);
+      const updatedMessage = normalizeOneMessage(data.data);
+      // console.log("msg update", updatedMessage);
+      const index = conversation.messages.findIndex(
+        (m) => m.id === updatedMessage.id
+      );
+      if (index !== -1) {
+        conversation.messages[index] = updatedMessage;
+        setLastMessage(updatedMessage);
       }
+      setForceUpdate((prev) => !prev);
     });
 
     return () => {
       newSocket.disconnect();
     };
-  }, [accessToken, conversation.messages]);
+  }, [accessToken, conversation._id]);
 
   // Simulate typing indicator
   useEffect(() => {
